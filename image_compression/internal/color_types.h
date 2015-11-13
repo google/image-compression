@@ -112,7 +112,7 @@ template <typename T> struct RgbaColor : public RgbColor<T> {
   T a;
 };
 
-// Defines an RGB pixel stored as 5 bits of red, 5 bits of green, and
+// Defines an RGB pixel stored as 5 bits of red, 6 bits of green, and
 // 5 bits of blue for a total of 16 bits, which fits in a uint16.  It
 // uses endian-specific bit fields to allow casting to be used for
 // very efficient conversions to and from uint16's.  This efficiency
