@@ -217,8 +217,8 @@ static void DecodeAlphaValues(const Dxt5Block &dxt5_block, uint8 alpha[8]) {
 }
 
 // Decodes a single Dxt1Block into a 4x4 array of RGB pixels.
-static void DecodeDxt1Block(const Dxt1Block &dxt1_block, bool swap_red_and_blue,
-                            Rgb888 decoded_pixels[4][4]) {
+void DecodeDxt1Block(const Dxt1Block &dxt1_block, bool swap_red_and_blue,
+                     Rgb888 decoded_pixels[4][4]) {
   // Decode the 4 colors defined by the block.
   Rgb888 colors[4];
   DecodeColors(dxt1_block, colors, swap_red_and_blue, false);

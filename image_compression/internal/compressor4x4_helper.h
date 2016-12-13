@@ -197,8 +197,8 @@ bool Compressor4x4Helper::Compress(
   // Instead, just copy or memcpy blocks or rows of blocks.
   const uint32 num_block_rows = GetNumBlocks(height);
   const uint32 num_block_cols = GetNumBlocks(width);
-  DCHECK_GT(num_block_rows, 0);
-  DCHECK_GT(num_block_cols, 0);
+  DCHECK_GT(num_block_rows, 0U);
+  DCHECK_GT(num_block_cols, 0U);
   for (uint32 row = 0; row < num_block_rows; ++row) {
     for (uint32 col = 0; col < num_block_cols; ++col) {
       // Encode one 4x4 block of pixels. The Pixel4x4 constructor
@@ -501,8 +501,8 @@ bool Compressor4x4Helper::CompressAndPad(
 
   const uint32 num_block_rows = GetNumBlocks(final_height);
   const uint32 num_block_cols = GetNumBlocks(final_width);
-  DCHECK_GT(num_block_rows, 0);
-  DCHECK_GT(num_block_cols, 0);
+  DCHECK_GT(num_block_rows, 0U);
+  DCHECK_GT(num_block_cols, 0U);
   for (uint32 row = 0; row < num_block_rows; ++row) {
     for (uint32 col = 0; col < num_block_cols; ++col) {
       // Encode one 4x4 block of pixels. The Pixel4x4 constructor

@@ -542,8 +542,8 @@ static uint64 FindBestSubblockEncoding(
 }
 
 // Encodes a 4x4 array of RGB pixels into a single 64-bit ETC1 block.
-static uint64 EncodeBlock(const Pixel4x4 &pixel4x4,
-                          EtcCompressor::CompressionStrategy strategy) {
+uint64 EncodeEtc1Block(const Pixel4x4 &pixel4x4,
+                       EtcCompressor::CompressionStrategy strategy) {
   uint32 error_lr, error_tb;
   switch (strategy) {
     case EtcCompressor::kSplitHorizontally:
@@ -628,7 +628,7 @@ class EtcEncode {
       : strategy_(strategy) {}
   uint64 operator()(const Pixel4x4 &pixel4x4, bool swap_red_and_blue) {
     DCHECK(!swap_red_and_blue);
-    return EncodeBlock(pixel4x4, strategy_);
+    return EncodeEtc1Block(pixel4x4, strategy_);
   }
  private:
   EtcCompressor::CompressionStrategy strategy_;
@@ -660,7 +660,7 @@ class EtcGetColumnPadBlock {
         pixel4x4.SetPixel(y, x, last_column_color);
       }
     }
-    return EncodeBlock(pixel4x4, strategy_);
+    return EncodeEtc1Block(pixel4x4, strategy_);
   }
  private:
   EtcCompressor::CompressionStrategy strategy_;
@@ -684,7 +684,7 @@ struct EtcGetRowPadBlock {
         pixel4x4.SetPixel(y, x, last_row_color);
       }
     }
-    return EncodeBlock(pixel4x4, strategy_);
+    return EncodeEtc1Block(pixel4x4, strategy_);
   }
  private:
   EtcCompressor::CompressionStrategy strategy_;

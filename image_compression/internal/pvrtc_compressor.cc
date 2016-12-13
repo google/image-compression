@@ -44,8 +44,10 @@ enum ModulationMode {
 };
 
 // Block width and height as for 2BPP PVRTC.
-static const uint32 kBlockWidth = 8;
-static const uint32 kBlockHeight = 4;
+static const uint32 kLog2BlockWidth = 3;
+static const uint32 kLog2BlockHeight = 2;
+static const uint32 kBlockWidth = (1 << kLog2BlockWidth);
+static const uint32 kBlockHeight = (1 << kLog2BlockHeight);
 
 //-----------------------------------------------------------------------------
 
@@ -92,7 +94,7 @@ static inline uint8 ApplyBitDepthReduction(uint8 input, uint32 bit_depth) {
   uint8 encoding_mask = GetMask(bit_depth) << (8 - bit_depth);
   uint8 encoded_bits = input & encoding_mask;
 
-  DCHECK_GE(bit_depth, 3);  // Not yet implemented for a bit_depth of 1 or 2.
+  DCHECK_GE(bit_depth, 3U);  // Not yet implemented for a bit_depth of 1 or 2.
 
   uint8 result = encoded_bits | (encoded_bits >> bit_depth);
   if (bit_depth <= 3) {
@@ -117,7 +119,7 @@ static inline uint8 ApplyBitDepthReduction(uint8 input, uint32 bit_depth) {
 //   3 = color1
 static Rgba8888 ApplyModulation(Rgba8888 color0, Rgba8888 color1, uint32 mod) {
   Rgba8888 result(color0);
-  DCHECK_GE(4, mod);
+  DCHECK_GE(4U, mod);
   switch (mod) {
     case 0:
       // Do nothing; keep result = color0.
@@ -200,6 +202,9 @@ static Rgba8888 Interpolate4_2BPP(Rgba8888 color00, Rgba8888 color01,
 // |width| width of the upscaled image.
 // |height| height of the upscaled image.
 // |x| and |y| the position of the pixel in the upscaled image.
+// According to:
+//  https://www.khronos.org/registry/gles/extensions/IMG/IMG_texture_compression_pvrtc.txt
+// width and height must be power-of-two.
 static Rgba8888 GetInterpolatedColor2BPP(const Rgba8888 *source,
                                          unsigned int width,
                                          unsigned int height,
@@ -207,22 +212,25 @@ static Rgba8888 GetInterpolatedColor2BPP(const Rgba8888 *source,
   // The left, top, right and bottom edges of the 2x2 pixel block in the source
   // image that will be used to interpolate. Note that through wrapping (for
   // example) source_left may be to the right of source_right.
+  // width and height are power-of-two, so we can use '&' instead of '%'.
   const uint32 source_left =
-      ((width + x - kBlockWidth / 2) % width) / kBlockWidth;
+      ((x - kBlockWidth / 2) & (width - 1)) >> kLog2BlockWidth;
   const uint32 source_top =
-      ((height + y - kBlockHeight / 2) % height) / kBlockHeight;
-  const uint32 source_right = (source_left + 1) % (width / kBlockWidth);
-  const uint32 source_bottom = (source_top + 1) % (height / kBlockHeight);
+      ((y - kBlockHeight / 2) & (height - 1)) >> kLog2BlockHeight;
+  const uint32 source_right =
+      (source_left + 1) & ((width >> kLog2BlockWidth) - 1);
+  const uint32 source_bottom =
+      (source_top + 1) & ((height >> kLog2BlockHeight) - 1);
 
   // The bilinear weights to be used for interpolation.
-  const uint32 x_weight = (x + kBlockWidth / 2) % kBlockWidth;
-  const uint32 y_weight = (y + kBlockHeight / 2) % kBlockHeight;
+  const uint32 x_weight = (x + kBlockWidth / 2) & (kBlockWidth - 1);
+  const uint32 y_weight = (y + kBlockHeight / 2) & (kBlockHeight - 1);
 
   const uint32 source_width = width / kBlockWidth;
-  Rgba8888 color00 = source[source_top * source_width + source_left];
-  Rgba8888 color01 = source[source_top * source_width + source_right];
-  Rgba8888 color10 = source[source_bottom * source_width + source_left];
-  Rgba8888 color11 = source[source_bottom * source_width + source_right];
+  const Rgba8888 color00 = source[source_top * source_width + source_left];
+  const Rgba8888 color01 = source[source_top * source_width + source_right];
+  const Rgba8888 color10 = source[source_bottom * source_width + source_left];
+  const Rgba8888 color11 = source[source_bottom * source_width + source_right];
 
   return Interpolate4_2BPP(color00, color01, color10, color11,
                            x_weight, y_weight);
@@ -239,8 +247,8 @@ static uint32 ColorBrightnessOrder(Rgba8888 color) {
 // This function also takes care of the wrapping of the coordinates, i.e. |x0|
 // and |y0| can be outside the bounds of the image.
 // |image| the source image pixel data.
-// |width| source image width.
-// |height| source image height.
+// |width| source image width (must be a power of two).
+// |height| source image height (must be a power of two).
 // |x0| left edge of the block to be considered in pixels.
 // |y0| top edge of the block to be considered in pixels.
 // |out_index_0|, |out_index_1| output colors as indices into |image|.
@@ -263,8 +271,8 @@ static void GetExtremesFast(const Rgba8888 *image, uint32 width, uint32 height,
 
   for (uint32 y = y0; y < y0 + kBlockHeight; y++) {
     for (uint32 x = x0; x < x0 + kBlockWidth; x++) {
-      uint32 x_wrapped = (x + width) % width;
-      uint32 y_wrapped = (y + height) % height;
+      uint32 x_wrapped = (x + width) & (width - 1);
+      uint32 y_wrapped = (y + height) & (height - 1);
       uint32 index = y_wrapped * width + x_wrapped;
       Rgba8888 color = image[index];
 
@@ -381,7 +389,7 @@ static unsigned EncodeColors(Rgba8888 colora, Rgba8888 colorb,
 
 // Works out which modulation mode to use for a given block in an image.
 // |image_mod| the modulation information for the image.
-// |width| and |height| image_mod pixel dimensions.
+// |width| and |height| image_mod pixel dimensions (must be a power of two).
 // |block_x| block x coordinate, i.e. ranging from 0 to |width| / kBlockWidth.
 // |block_y| block y coordinate, i.e. ranging from 0 to |height| / kBlockHeight.
 static ModulationMode CalculateBlockModulationMode(
@@ -408,11 +416,11 @@ static ModulationMode CalculateBlockModulationMode(
       // Index of adjacent horizontal pixel in |image_mod|.
       uint32 index_adjacent_horizontal =
           (block_y * kBlockHeight + y) * width +
-          ((block_x * kBlockWidth + x + 1) % width);
+          ((block_x * kBlockWidth + x + 1) & (width - 1));
 
       // Index of adjacent vertical pixel in |image_mod|.
       uint32 index_adjacent_vertical =
-          ((block_y * kBlockHeight + y + 1) % width) * width +
+          ((block_y * kBlockHeight + y + 1) & (height - 1)) * width +
           (block_x * kBlockWidth + x);
 
       horizontal_count +=
