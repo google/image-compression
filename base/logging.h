@@ -46,19 +46,19 @@ class LogFatal {
   std::ostringstream str_;
 };
 
-#define LOG_IF(condition)              \
-  !(condition) ? LogNull().GetStream() \
-               : LogFatal(__FILE__, __LINE__).GetStream()
+#define LOG_IF_NOT(condition)                             \
+  !(condition) ? LogFatal(__FILE__, __LINE__).GetStream() \
+               : LogNull().GetStream()
 
-#define DCHECK_OP(a, b, op) LOG_IF((a)op(b))
+#define DCHECK_OP(a, b, op) LOG_IF_NOT((a)op(b))
 
-#define DCHECK_LE(a, b) DCHECK_OP((a), (b), <= )
+#define DCHECK_LE(a, b) DCHECK_OP((a), (b), <=)
 #define DCHECK_GE(a, b) DCHECK_OP((a), (b), >=)
 #define DCHECK_LT(a, b) DCHECK_OP((a), (b), <)
 #define DCHECK_GT(a, b) DCHECK_OP((a), (b), >)
 #define DCHECK_EQ(a, b) DCHECK_OP((a), (b), ==)
 #define DCHECK_NE(a, b) DCHECK_OP((a), (b), !=)
-#define DCHECK(a) LOG_IF((a))
+#define DCHECK(a) LOG_IF_NOT((a))
 
 #else
 
